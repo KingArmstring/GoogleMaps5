@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.net.wifi.WifiManager;
 import android.support.annotation.NonNull;
@@ -20,6 +21,7 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
+import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
@@ -29,14 +31,27 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.Circle;
+import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.CustomCap;
+import com.google.android.gms.maps.model.Dot;
+import com.google.android.gms.maps.model.Gap;
+import com.google.android.gms.maps.model.JointType;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.PatternItem;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.gms.maps.model.RoundCap;
 
-public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, GoogleMap.OnPolygonClickListener, GoogleMap.OnPolylineClickListener {
+import java.util.Arrays;
+import java.util.List;
+
+public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener,
+        GoogleMap.OnPolygonClickListener,
+        GoogleMap.OnPolylineClickListener, LocationListener {
 
     private GoogleMap mMap;
     private Marker mMarker;
@@ -45,6 +60,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private AlertDialog dialog;
     private LocationRequest mLocationRequest;
     private GoogleApiClient mGoogleApiClient;
+    private static final PatternItem DOT = new Dot();
+    private static final PatternItem GAP = new Gap(5);
+    private Circle circle;
+    /*
+    to make patter in the polyline we have to make dots and gaps
+    then create a list containing the complete stroke(only one iteration).
+     */
+
+    private static final List<PatternItem> PATTERN_POLYLINE_DOTTED = Arrays.asList(GAP, DOT);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -160,6 +184,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         polyline1.setStartCap(
                 new CustomCap(
                         BitmapDescriptorFactory.fromResource(R.mipmap.wifi_icon), 10));
+        polyline1.setEndCap(new RoundCap());
+        polyline1.setWidth(5);
+        polyline1.setColor(0xff66AA33);
+        polyline1.setJointType(JointType.ROUND);
+
+        polyline1.setPattern(PATTERN_POLYLINE_DOTTED);
+        circle = mMap.addCircle(new CircleOptions()
+                .center(new LatLng(-33.87365, 151.20689))
+                .radius(250)
+                .strokeColor(Color.RED));
     }
 
     protected void createLocationRequest() {
@@ -187,7 +221,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 PackageManager.PERMISSION_GRANTED) {
             return;
         }
-        Location l = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+        Log.d("Armstring", "onConnected");
+        LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
     }
 
     @Override
@@ -211,6 +246,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         /*
         in this method we use method getTag() of the polyline so that we can know which line is the clicked line.
          */
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        Log.d("Armstring", "onLocationChanged");
+        if(circle != null){
+            mLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+            circle.setCenter(mLatLng);
+            Log.d("Armstring", "onLocationChanged inside if statement");
+        }
     }
 }
 
